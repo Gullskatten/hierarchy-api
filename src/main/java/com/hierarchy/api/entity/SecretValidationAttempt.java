@@ -13,13 +13,16 @@ import java.sql.Timestamp;
 @NamedQueries(value = {
         @NamedQuery(name = SecretValidationAttempt.FIND_ALL, query = "select u from SecretValidationAttempt u"),
         @NamedQuery(name = SecretValidationAttempt.FIND_BY_ID, query = "select u from SecretValidationAttempt u where u.valId = :valId"),
-        @NamedQuery(name = SecretValidationAttempt.FIND_BY_USER_ID, query = "select u from SecretValidationAttempt u where u.userId = :userId")
+        @NamedQuery(name = SecretValidationAttempt.FIND_BY_USER_ID, query = "select u from SecretValidationAttempt u where u.userId = :userId"),
+        @NamedQuery(name = SecretValidationAttempt.FIND_AMOUNT_ATTEMPTS_LEFT, query = "select u.amount from SecretValidationAttempt u where u.userId = :userId")
+
 })
 public class SecretValidationAttempt {
 
     public static final String FIND_ALL = "SecretValidationAttempt.findAll";
     public static final String FIND_BY_ID = "SecretValidationAttempt.findById";
     public static final String FIND_BY_USER_ID = "SecretValidationAttempt.findByUserId";
+    public static final String FIND_AMOUNT_ATTEMPTS_LEFT = "SecretValidationAttempt.findAttemptsLeftByUserId";
 
     private int valId;
     private int amount;

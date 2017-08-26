@@ -14,6 +14,8 @@ import javax.ws.rs.core.Response;
 import java.util.List;
 import java.util.UUID;
 
+import static java.text.MessageFormat.format;
+
 @Path("/user")
 @Produces({MediaType.APPLICATION_JSON})
 public class UserResource {
@@ -62,13 +64,17 @@ public class UserResource {
 
         User user = userController.findByToken(token);
 
-        if (user.isLocked()) {
+        if(user == null) {
+            Message errorMessage = new Message("Wops! User not found.", false);
+            return Response.status(400).entity(gson.toJson(errorMessage)).build();
+        }
 
+        if (user.isLocked()) {
             // Lock expired!
             if (System.currentTimeMillis() > user.getLockedUntil().getTime()) {
                 userController.unlockUserToken(user);
                 userController.resetTokenAttempts(user);
-                return validateUserSecret(user.getToken(), secret, gson);
+                return validateUserSecret(user, secret, gson);
             }
 
             // User is still locked..
@@ -77,7 +83,7 @@ public class UserResource {
         }
 
         if (userController.incrementTokenAttempt(user)) {
-            return validateUserSecret(token, secret, gson);
+            return validateUserSecret(user, secret, gson);
         } else {
             userController.lockUserToken(user);
             Message errorMessage = new Message("Too many attempts, token locked for 15 minutes. Please try again later.",
@@ -86,14 +92,16 @@ public class UserResource {
         }
     }
 
-    private Response validateUserSecret(String token, String secret, Gson gson) {
-        boolean isUserSecretValid = userController.validateHashAndSecret(token, secret);
+    private Response validateUserSecret(User user, String secret, Gson gson) {
+        boolean isUserSecretValid = userController.validateHashAndSecret(user.getToken(), secret);
 
         if (!isUserSecretValid) {
-            Message errorMessage = new Message("That's not the secret..", false);
+            int attemptsLeft = userController.findSecretValidationAttemptsLeft(user);
+            String message = format("That is not the secret {0} gave you.. {1} attempt(s) left.", user.getFirstName(), attemptsLeft);
+            Message errorMessage = new Message(message, false);
             return Response.status(400).entity(gson.toJson(errorMessage)).build();
         }
-
+        userController.resetTokenAttempts(user);
         Message message = new Message("Welcome to the network!", true);
         return Response.ok().entity(gson.toJson(message)).build();
     }

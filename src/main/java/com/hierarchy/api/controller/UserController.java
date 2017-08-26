@@ -11,6 +11,7 @@ import java.util.List;
 public class UserController extends AbstractDAO<User> {
 
     private static final int LOCKED_AMOUNT = 9000;
+    public static final int MAX_ATTEMPTS_SECRET = 3;
 
     public UserController(SessionFactory sessionFactory) {
         super(sessionFactory);
@@ -66,7 +67,12 @@ public class UserController extends AbstractDAO<User> {
             currentSession().save(validationAttempt);
         } else {
             SecretValidationAttempt attempt =  validationAttempts.get(0);
-            if(attempt.getAmount() > 2) {
+
+            if(System.currentTimeMillis() > attempt.getLastAttempt().getTime() + LOCKED_AMOUNT) {
+                attempt.setLastAttempt(new Timestamp(System.currentTimeMillis()));
+                attempt.setAmount(1);
+                currentSession().merge(attempt);
+            } else if(attempt.getAmount() >= MAX_ATTEMPTS_SECRET -1) {
                 attempt.setLastAttempt(new Timestamp(System.currentTimeMillis()));
                 currentSession().merge(attempt);
                 return false;
@@ -103,5 +109,14 @@ public class UserController extends AbstractDAO<User> {
         user.setLockedUntil(null);
         user.setLocked(false);
         currentSession().merge(user);
+    }
+
+    public int findSecretValidationAttemptsLeft(User user) {
+       Integer i = currentSession()
+               .createNamedQuery(SecretValidationAttempt.FIND_AMOUNT_ATTEMPTS_LEFT, Integer.class)
+               .setParameter("userId", user.getUserId())
+               .list().get(0);
+
+       return MAX_ATTEMPTS_SECRET - i;
     }
 }
