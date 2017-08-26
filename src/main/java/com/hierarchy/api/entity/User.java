@@ -6,24 +6,25 @@ import org.hibernate.annotations.NamedQuery;
 import org.hibernate.validator.constraints.Email;
 import org.hibernate.validator.constraints.NotBlank;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Table;
-import java.util.UUID;
+import javax.persistence.*;
+import java.sql.Timestamp;
 
 @Entity
 @Table(name = "users")
 @NamedQueries(value = {
         @NamedQuery(name = User.FIND_ALL, query = "select u from User u"),
-        @NamedQuery(name = User.FIND_BY_HASH, query = "select u from User u where u.token = :hash"),
-        @NamedQuery(name = User.FIND_CHILDREN, query = "select u from User u where u.referralToken = :hash")
+        @NamedQuery(name = User.FIND_BY_ID, query = "select u from User u where u.userId = :userId"),
+        @NamedQuery(name = User.FIND_BY_HASH, query = "select u from User u where u.token = :token"),
+        @NamedQuery(name = User.FIND_CHILDREN_OF_HASH, query = "select u from User u where u.referralToken = :token"),
+        @NamedQuery(name = User.VALIDATE_TOKEN_AND_SECRET, query = "select u.username from User u where u.token = :token and u.secret = :secret")
 })
 public class User {
 
     public static final String FIND_ALL = "Users.findAll";
-    public static final String FIND_BY_HASH = "Users.findParent";
-    public static final String FIND_CHILDREN = "Users.findChildren";
+    public static final String FIND_BY_ID = "Users.findById";
+    public static final String FIND_CHILDREN_OF_HASH = "Users.findChildrenOfHash";
+    public static final String FIND_BY_HASH = "Users.findByHash";
+    public static final String VALIDATE_TOKEN_AND_SECRET = "Users.findUserNameByHashAndSecret";
 
     private int userId;
     private String firstName;
@@ -32,12 +33,19 @@ public class User {
     private String username;
     private String email;
     private String token;
-    private String referralToken;
+    private Timestamp lockedUntil;
+    private boolean isLocked;
+
+    @Transient
+    private transient String referralToken;
+    @Transient
+    private transient String secret;
 
     public User() {
     }
 
-    public User(int userId, String firstName, String lastName, String country, String username, String email, String token, String referralToken) {
+    public User(int userId, String firstName, String lastName, String country, String username, String email, String token, String referralToken,
+                String secret) {
         this.userId = userId;
         this.firstName = firstName;
         this.lastName = lastName;
@@ -46,9 +54,11 @@ public class User {
         this.email = email;
         this.token = token;
         this.referralToken = referralToken;
+        this.secret = secret;
     }
 
     @Id
+    @GeneratedValue(strategy=GenerationType.IDENTITY)
     @JsonProperty
     @Column(name = "user_id")
     public int getUserId() {
@@ -73,7 +83,6 @@ public class User {
         return country;
     }
 
-    @NotBlank
     @JsonProperty
     @Column(name = "username")
     public String getUsername() {
@@ -82,6 +91,7 @@ public class User {
 
     @JsonProperty
     @Email(message = "Unrecognized e-mail.")
+    @Column(name = "email")
     public String getEmail() {
         return email;
     }
@@ -92,11 +102,28 @@ public class User {
         return token;
     }
 
-    @NotBlank
     @JsonProperty
     @Column(name = "referral_hash")
     public String getReferralToken() {
         return referralToken;
+    }
+
+    @JsonProperty
+    @Column(name = "is_locked")
+    public boolean isLocked() {
+        return isLocked;
+    }
+
+    @JsonProperty
+    @Column(name = "locked_until")
+    public Timestamp getLockedUntil() {
+        return lockedUntil;
+    }
+
+    @JsonProperty
+    @Column(name = "secret")
+    public String getSecret() {
+        return secret;
     }
 
     public void setUserId(int userId) {
@@ -129,5 +156,15 @@ public class User {
 
     public void setReferralToken(String referralToken) {
         this.referralToken = referralToken;
+    }
+
+    public void setSecret(String secret) { this.secret = secret; }
+
+    public void setLockedUntil(Timestamp lockedUntil) {
+        this.lockedUntil = lockedUntil;
+    }
+
+    public void setLocked(boolean locked) {
+        isLocked = locked;
     }
 }

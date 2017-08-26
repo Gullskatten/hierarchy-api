@@ -10,11 +10,15 @@ public class Message {
     @JsonProperty
     private String message;
 
-
     public Message(String message, boolean isSuccess, User user) {
         this.message = message;
         this.isSuccess = isSuccess;
         this.user = user;
+    }
+
+    public Message(String message, boolean isSuccess) {
+        this.isSuccess = isSuccess;
+        this.message = message;
     }
 
     public String getMessage() {

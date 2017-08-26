@@ -31,26 +31,70 @@ public class UserResource {
     }
 
     @GET
-    @Path("/{hash}")
+    @Path("/{token}")
     @UnitOfWork
-    public User findUserByHash(@PathParam(value = "hash") String id) {
-        return userController.findByHash(id);
+    public User findUserByHash(@PathParam(value = "token") String token) {
+        return userController.findByToken(token);
     }
 
     @POST
-    @Path("/validate/{hash}")
+    @Path("/validate/{token}")
     @UnitOfWork
-    public Response isUserExisting(@PathParam(value = "hash") String id) {
+    public Response isUserExisting(@PathParam(value = "token") String id) {
         Gson gson = new Gson();
 
-        User user = userController.findByHash(id);
+        User user = userController.findByToken(id);
 
         if (user == null) {
             Message errorMessage = new Message("Token validation failed.", false, null);
-            return Response.ok().entity(gson.toJson(errorMessage)).build();
+            return Response.status(400).entity(gson.toJson(errorMessage)).build();
         }
 
         Message message = new Message("Token validated successfully.", true, user);
+        return Response.ok().entity(gson.toJson(message)).build();
+    }
+
+    @POST
+    @Path("/validate/{token}/{secret}")
+    @UnitOfWork
+    public Response isUserSecretValid(@PathParam(value = "token") String token, @PathParam(value = "secret") String secret) {
+        Gson gson = new Gson();
+
+        User user = userController.findByToken(token);
+
+        if (user.isLocked()) {
+
+            // Lock expired!
+            if (System.currentTimeMillis() > user.getLockedUntil().getTime()) {
+                userController.unlockUserToken(user);
+                userController.resetTokenAttempts(user);
+                return validateUserSecret(user.getToken(), secret, gson);
+            }
+
+            // User is still locked..
+            Message errorMessage = new Message("The token is locked, please try again later.", false);
+            return Response.status(400).entity(gson.toJson(errorMessage)).build();
+        }
+
+        if (userController.incrementTokenAttempt(user)) {
+            return validateUserSecret(token, secret, gson);
+        } else {
+            userController.lockUserToken(user);
+            Message errorMessage = new Message("Too many attempts, token locked for 15 minutes. Please try again later.",
+                    false);
+            return Response.status(400).entity(gson.toJson(errorMessage)).build();
+        }
+    }
+
+    private Response validateUserSecret(String token, String secret, Gson gson) {
+        boolean isUserSecretValid = userController.validateHashAndSecret(token, secret);
+
+        if (!isUserSecretValid) {
+            Message errorMessage = new Message("That's not the secret..", false);
+            return Response.status(400).entity(gson.toJson(errorMessage)).build();
+        }
+
+        Message message = new Message("Welcome to the network!", true);
         return Response.ok().entity(gson.toJson(message)).build();
     }
 
@@ -66,7 +110,7 @@ public class UserResource {
     @UnitOfWork
     public Response createUser(@PathParam("referral_hash") String hash, @Valid User user) {
 
-        User referrer = userController.findByHash(hash);
+        User referrer = userController.findByToken(hash);
 
         if (referrer == null) {
             Gson gson = new Gson();

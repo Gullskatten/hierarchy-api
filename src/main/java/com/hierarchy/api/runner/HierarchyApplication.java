@@ -2,6 +2,7 @@ package com.hierarchy.api.runner;
 
 import com.hierarchy.api.config.GuiceConfig;
 import com.hierarchy.api.controller.UserController;
+import com.hierarchy.api.entity.SecretValidationAttempt;
 import com.hierarchy.api.entity.User;
 import com.hierarchy.api.resources.UserResource;
 import io.dropwizard.Application;
@@ -20,7 +21,7 @@ public class HierarchyApplication extends Application<GuiceConfig> {
         new HierarchyApplication().run(args);
     }
 
-   private HibernateBundle<GuiceConfig> hibernate = new HibernateBundle<GuiceConfig>(User.class) {
+   private HibernateBundle<GuiceConfig> hibernate = new HibernateBundle<GuiceConfig>(User.class, SecretValidationAttempt.class) {
         @Override
         public DataSourceFactory getDataSourceFactory(GuiceConfig configuration) {
             return configuration.getDatabaseAppDataSourceFactory();
@@ -46,6 +47,5 @@ public class HierarchyApplication extends Application<GuiceConfig> {
         final UserResource personResource = new UserResource(personDAO);
 
         environment.jersey().register(personResource);
-
     }
 }
