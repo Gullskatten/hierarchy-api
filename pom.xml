@@ -12,7 +12,7 @@
     </properties>
      <scm>
         <url>https://github.com/Gullskatten/hierarchy-api</url>
-        <connection>scm:git:https://github.com/Gullskatten/hierarchy-api.git</connection>
+        <connection>scm:git:ssh://github.com/Gullskatten/hierarchy-api.git</connection>
         <tag>HEAD</tag>
     </scm>
     <distributionManagement>
