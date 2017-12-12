@@ -10,6 +10,48 @@
     <properties>
         <dropwizard.version>1.1.3</dropwizard.version>
     </properties>
+     <scm>
+        <url>https://github.com/Gullskatten/hierarchy-api</url>
+        <connection>scm:git:https://github.com/Gullskatten/hierarchy-api.git</connection>
+        <tag>HEAD</tag>
+    </scm>
+    <distributionManagement>
+        <repository>
+            <id>nexus-releases</id>
+            <!-- http://localhost:8081/repository/<repository-name> -->
+            <url>http://localhost:8081/snapshots/</url>
+        </repository>
+    </distributionManagement>
+
+        <profiles>
+        <profile>
+            <id>snapshots</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.sonatype.plugins</groupId>
+                        <artifactId>nexus-staging-maven-plugin</artifactId>
+                        <version>1.5.1</version>
+                        <executions>
+                            <execution>
+                                <id>default-deploy</id>
+                                <phase>deploy</phase>
+                                <goals>
+                                    <goal>deploy</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <serverId>snapshots</serverId>
+                            <nexusUrl>http://localhost:8081/</nexusUrl>
+                            <skipStaging>true</skipStaging>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
     <dependencies>
         <dependency>
             <groupId>io.dropwizard</groupId>
@@ -96,6 +138,26 @@
                         </manifest>
                     </archive>
                 </configuration>
+            </plugin>
+               <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-release-plugin</artifactId>
+                <version>2.5.3</version>
+                <configuration>
+                    <tag>SNAPSHOT-</tag>
+                    <tagNameFormat>v@{project.version}</tagNameFormat>
+                    <autoVersionSubmodules>true</autoVersionSubmodules>
+                    <!-- releaseProfiles configuration will actually force a Maven profile
+                        – the `releases` profile – to become active during the Release process. -->
+                    <releaseProfiles>snapshots</releaseProfiles>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-scm-plugin</artifactId>
+                        <version>1.8.1</version>
+                    </dependency>
+                </dependencies>
             </plugin>
         </plugins>
     </build>
